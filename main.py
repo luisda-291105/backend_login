@@ -51,8 +51,20 @@ async def save_new_user(name : str, password : str, email : str, filename : str=
         return False
 
 @App.get("/userAll")
-async def userAll( ):
-    pass
+async def userAll():
+    try:
+        ruta = os.getcwd()
+        file = os.path.join(ruta , "users.csv")
+
+        if not os.path.exists(file):
+            return "no hay archivo aun"
+        
+        df = pd.read_csv(file)
+        return df.to_dict(orient="records")
+    except Exception as e:
+        print(f"Error: {e}")  
+        return False
+
 
 @App.get("/validateIncome")
 async def validateIncome(userEmail , UserPass):
