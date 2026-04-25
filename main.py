@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import pandas as pd
 import os
+import uuid
 
 App = FastAPI()
 
@@ -23,6 +24,7 @@ async def save_new_user(name : str, password : str, email : str, filename : str=
         bool: True if successful, False if user already exists
     """
     try:
+        user_id = str(uuid.uuid4())
         # Check if user already exists
         try:
             with open(filename, 'r') as file:
@@ -34,7 +36,7 @@ async def save_new_user(name : str, password : str, email : str, filename : str=
         
         # Save the new user
         with open(filename, 'a') as file:
-            file.write(f"{name},{password},{email}\n")
+            file.write(f"{user_id}, {name},{password},{email}\n")
         return True
     
     except Exception:
