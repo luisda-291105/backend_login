@@ -65,7 +65,6 @@ async def userAll():
         print(f"Error: {e}")  
         return False
 
-
 @App.get("/validateIncome")
 async def validate_user(email, password, filename="users.csv"):
     """
@@ -83,7 +82,10 @@ async def validate_user(email, password, filename="users.csv"):
     try:
         # Verificar si el archivo existe
         if not os.path.exists(filename):
-            return "no hay archivo aun"
+            return  {
+                "success": False,
+                "message": "No hay usuarios registrados aún"
+            }
         
         # Leer el CSV
         df = pd.read_csv(filename)
@@ -102,21 +104,34 @@ async def validate_user(email, password, filename="users.csv"):
         if not filtro.empty:
             # Devolver el primer usuario encontrado como diccionario
             usuario = filtro.iloc[0].to_dict()
-            return usuario
+            return {
+                "success": True,
+                "message": "Login exitoso",
+                "user": usuario
+            }
         else:
             # Verificar si el email existe pero la contraseña es incorrecta
             email_exists = df[df["email"] == email_clean]
             if not email_exists.empty:
-                return "contraseña incorrecta"
+                return {
+                    "success": False,
+                    "message": "Contraseña incorrecta"
+                }
             else:
-                return "email no registrado"
+                return  {
+                    "success": False,
+                    "message": "Email no registrado"
+                }
         
     except Exception as e:
-        print(f"Error: {e}")
-        return f"error en validación: {str(e)}"
+        print(f"Error en login: {e}")
+        return {
+            "success": False,
+            "message": f"Error del sistema: {str(e)}"
+        }
 
-
-    
-
+@App.get("/isLogget")
+async def isLogget():
+    pass
 
 
