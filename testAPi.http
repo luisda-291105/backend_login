@@ -1,0 +1,12 @@
+# crear un nuevo usuario
+
+POST http://127.0.0.1:8000/createUser?name=perez&password=123456&email=perez@g
+
+###
+# buscar todos los usuarios creados
+
+GET http://127.0.0.1:8000/userAll
+
+###
+# validar ingreso de usuario
+GET http://127.0.0.1:8000/validateIncome
