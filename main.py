@@ -7,7 +7,7 @@ App = FastAPI()
 
 @App.get("/")
 async def saludo():
-    return "welcome to my  login system"
+    return "welcome to my login system"
 
 @App.post("/createUser")
 async def save_new_user(name : str, password : str, email : str, filename : str="users.csv"):
@@ -24,23 +24,31 @@ async def save_new_user(name : str, password : str, email : str, filename : str=
         bool: True if successful, False if user already exists
     """
     try:
-        user_id = str(uuid.uuid4())
-        # Check if user already exists
-        try:
-            with open(filename, 'r') as file:
-                for line in file:
-                    if line.startswith(f"{name},"):
-                        return False  # User already exists
-        except FileNotFoundError:
-            pass  # File doesn't exist yet, that's fine
-        
-        # Save the new user
-        with open(filename, 'a') as file:
-            file.write(f"{user_id}, {name},{password},{email}\n")
+        # CORREGIDO: uuid.uuid4() con paréntesis
+        userEntry = {
+            "id": str(uuid.uuid4()),
+            "name": name,
+            "pass": password,
+            "email": email
+        }
+         # CORREGIDO: Crear DataFrame con lista de diccionarios
+        df_new = pd.DataFrame([userEntry])  # Importante: [userEntry] no userEntry solo
+
+        # Verificar si el archivo existe
+        if os.path.exists(filename):
+            # Leer usuarios existentes
+            df_existing = pd.read_csv(filename)
+            # Concatenar (no sobrescribir)
+            df_combined = pd.concat([df_existing, df_new], ignore_index=True)
+        else:
+            df_combined = df_new
+
+        # Guardar (esto sí sobrescribe con TODOS los datos)
+        df_combined.to_csv(filename, index=False, encoding="utf-8")
         return True
-    
-    except Exception:
-        return False  # Error occurred
+    except Exception as e:
+        print(f"Error: {e}")  # Para depuración
+        return False
 
 @App.get("/userAll")
 async def userAll( ):
