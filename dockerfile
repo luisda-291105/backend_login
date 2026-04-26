@@ -1,20 +1,20 @@
-# Imagen ligera oficial
-FROM python:3.11-slim
+# Dockerfile
+FROM python:3.9-slim
 
-# Directorio de trabajo
+# Establecer directorio de trabajo
 WORKDIR /app
 
-# Copiar dependencias primero (mejora caché de Docker)
+# Copiar requirements.txt limpio
 COPY requirements.txt .
 
-# Instalar librerías
+# Instalar dependencias
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el resto del proyecto
+# Copiar el resto de la aplicación
 COPY . .
 
-# Exponer puerto (Flask por defecto)
+# Exponer el puerto
 EXPOSE 8001
 
-# Comando de arranque
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+# Comando para ejecutar la aplicación
+CMD ["uvicorn", "main:App", "--host", "0.0.0.0", "--port", "8001"]
