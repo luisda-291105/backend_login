@@ -1,116 +1,108 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Cookie, Header
+from typing import Optional
 import pandas as pd
 import os
 import uuid
+from datetime import datetime, timedelta
 
 App = FastAPI()
+
+# Almacenamiento de sesiones activas (en memoria)
+active_sessions = {}
 
 @App.get("/")
 async def saludo():
     return "welcome to my login system"
 
 @App.post("/createUser")
-async def save_new_user(name : str, password : str, email : str, filename : str="users.csv"):
+async def save_new_user(name: str, password: str, email: str, filename: str = "users.csv"):
     """
     Saves a new user to a text file.
-    
-    Args:
-        name (str): User's name
-        password (str): User's password
-        email (str): User's email
-        filename (str): File to save user data (default: "users.txt")
-    
-    Returns:
-        bool: True if successful, False if user already exists
     """
     try:
-        # CORREGIDO: uuid.uuid4() con paréntesis
         userEntry = {
             "id": str(uuid.uuid4()),
             "name": name,
             "pass": password,
             "email": email
         }
-         # CORREGIDO: Crear DataFrame con lista de diccionarios
-        df_new = pd.DataFrame([userEntry])  # Importante: [userEntry] no userEntry solo
+        
+        df_new = pd.DataFrame([userEntry])
 
-        # Verificar si el archivo existe
         if os.path.exists(filename):
-            # Leer usuarios existentes
             df_existing = pd.read_csv(filename)
-            # Concatenar (no sobrescribir)
             df_combined = pd.concat([df_existing, df_new], ignore_index=True)
         else:
             df_combined = df_new
 
-        # Guardar (esto sí sobrescribe con TODOS los datos)
         df_combined.to_csv(filename, index=False, encoding="utf-8")
-        return True
+        return {"success": True, "message": "Usuario creado exitosamente"}
     except Exception as e:
-        print(f"Error: {e}")  # Para depuración
-        return False
+        print(f"Error: {e}")
+        return {"success": False, "message": str(e)}
 
 @App.get("/userAll")
 async def userAll():
     try:
         ruta = os.getcwd()
-        file = os.path.join(ruta , "users.csv")
+        file = os.path.join(ruta, "users.csv")
 
         if not os.path.exists(file):
-            return "no hay archivo aun"
+            return {"message": "no hay archivo aun", "users": []}
         
         df = pd.read_csv(file)
-        return df.to_dict(orient="records")
+        return {"users": df.to_dict(orient="records")}
     except Exception as e:
-        print(f"Error: {e}")  
-        return False
+        print(f"Error: {e}")
+        return {"success": False, "message": str(e)}
 
 @App.get("/validateIncome")
-async def validate_user(email, password, filename="users.csv"):
+async def validate_user(email: str, password: str, filename: str = "users.csv"):
     """
-    Valida email y contraseña contra el archivo CSV.
-    
-    Args:
-        email (str): Email del usuario
-        password (str): Contraseña del usuario
-        filename (str): Ruta del archivo CSV
-    
-    Returns:
-        dict or str: Diccionario con datos del usuario si es válido, 
-                     o mensaje de error si no
+    Valida email y contraseña y crea una sesión si es correcto.
     """
     try:
-        # Verificar si el archivo existe
         if not os.path.exists(filename):
-            return  {
+            return {
                 "success": False,
                 "message": "No hay usuarios registrados aún"
             }
         
-        # Leer el CSV
         df = pd.read_csv(filename)
         
-        # Limpiar datos
         df["email"] = df["email"].astype(str).str.strip().str.lower()
         df["pass"] = df["pass"].astype(str).str.strip()
         
-        # Limpiar email y password de entrada
         email_clean = str(email).strip().lower()
         password_clean = str(password).strip()
         
-        # Buscar usuario que coincida con email Y contraseña
         filtro = df[(df["email"] == email_clean) & (df["pass"] == password_clean)]
         
         if not filtro.empty:
-            # Devolver el primer usuario encontrado como diccionario
             usuario = filtro.iloc[0].to_dict()
+            
+            # Crear token de sesión
+            session_token = str(uuid.uuid4())
+            
+            # Guardar sesión activa
+            active_sessions[session_token] = {
+                "user_id": usuario["id"],
+                "user_email": usuario["email"],
+                "user_name": usuario["name"],
+                "login_time": datetime.now().isoformat(),
+                "expires": (datetime.now() + timedelta(hours=24)).isoformat()
+            }
+            
+            # Remover contraseña por seguridad
+            usuario.pop("pass", None)
+            
             return {
                 "success": True,
                 "message": "Login exitoso",
-                "user": usuario
+                "user": usuario,
+                "session_token": session_token  # Importante: devolver el token al cliente
             }
         else:
-            # Verificar si el email existe pero la contraseña es incorrecta
             email_exists = df[df["email"] == email_clean]
             if not email_exists.empty:
                 return {
@@ -118,7 +110,7 @@ async def validate_user(email, password, filename="users.csv"):
                     "message": "Contraseña incorrecta"
                 }
             else:
-                return  {
+                return {
                     "success": False,
                     "message": "Email no registrado"
                 }
@@ -130,8 +122,54 @@ async def validate_user(email, password, filename="users.csv"):
             "message": f"Error del sistema: {str(e)}"
         }
 
-@App.get("/isLogget")
-async def isLogget():
-    pass
-
+@App.get("/isLogged")
+async def isLogged(session_token: str):
+    """
+    Verifica si un usuario está logueado mediante su token de sesión.
+    
+    Args:
+        session_token (str): Token de sesión obtenido durante el login
+    
+    Returns:
+        dict: Estado de la sesión y datos del usuario si está logueado
+    """
+    try:
+        # Verificar si el token existe en las sesiones activas
+        if session_token not in active_sessions:
+            return {
+                "logged": False,
+                "message": "No hay sesión activa. Por favor, inicie sesión."
+            }
+        
+        session = active_sessions[session_token]
+        
+        # Verificar si la sesión ha expirado
+        expires = datetime.fromisoformat(session["expires"])
+        if datetime.now() > expires:
+            # Eliminar sesión expirada
+            del active_sessions[session_token]
+            return {
+                "logged": False,
+                "message": "La sesión ha expirado. Por favor, inicie sesión nuevamente."
+            }
+        
+        # Sesión válida
+        return {
+            "logged": True,
+            "message": "Sesión activa",
+            "user": {
+                "id": session["user_id"],
+                "email": session["user_email"],
+                "name": session["user_name"]
+            },
+            "login_time": session["login_time"],
+            "expires_in": session["expires"]
+        }
+        
+    except Exception as e:
+        print(f"Error en isLogged: {e}")
+        return {
+            "logged": False,
+            "message": f"Error del sistema: {str(e)}"
+        }
 
