@@ -1,5 +1,5 @@
 # Dockerfile
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # Establecer directorio de trabajo
 WORKDIR /app
@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 8001
 
 # Comando para ejecutar la aplicación
-CMD ["uvicorn", "main:App", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
