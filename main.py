@@ -5,16 +5,16 @@ import os
 import uuid
 from datetime import datetime, timedelta
 
-App = FastAPI()
+app = FastAPI()
 
 # Almacenamiento de sesiones activas (en memoria)
 active_sessions = {}
 
-@App.get("/")
+@app.get("/")
 async def saludo():
     return "welcome to my login system"
 
-@App.post("/createUser")
+@app.post("/createUser")
 async def save_new_user(name: str, password: str, email: str, filename: str = "users.csv"):
     """
     Saves a new user to a text file.
@@ -41,7 +41,7 @@ async def save_new_user(name: str, password: str, email: str, filename: str = "u
         print(f"Error: {e}")
         return {"success": False, "message": str(e)}
 
-@App.get("/userAll")
+@app.get("/userAll")
 async def userAll():
     try:
         ruta = os.getcwd()
@@ -56,7 +56,7 @@ async def userAll():
         print(f"Error: {e}")
         return {"success": False, "message": str(e)}
 
-@App.get("/validateIncome")
+@app.get("/validateIncome")
 async def validate_user(email: str, password: str, filename: str = "users.csv"):
     """
     Valida email y contraseña y crea una sesión si es correcto.
@@ -122,7 +122,7 @@ async def validate_user(email: str, password: str, filename: str = "users.csv"):
             "message": f"Error del sistema: {str(e)}"
         }
 
-@App.get("/isLogged")
+@app.get("/isLogged")
 async def isLogged(session_token: str):
     """
     Verifica si un usuario está logueado mediante su token de sesión.
@@ -167,7 +167,7 @@ async def isLogged(session_token: str):
             "message": f"Error del sistema: {str(e)}"
         }
 
-@App.get("/activeSessions")
+@app.get("/activeSessions")
 async def lookActiveSessions():
     """
     Muestra todos los usuarios actualmente logueados (sesiones activas).
@@ -224,7 +224,7 @@ async def lookActiveSessions():
             "message": f"Error al obtener sesiones activas: {str(e)}"
         }
 
-@App.get("/getUserToken")
+@app.get("/getUserToken")
 async def get_user_token(user_email: str = None, user_name: str = None):
     """
     Obtiene el token de un usuario específico por email o nombre.
@@ -283,7 +283,7 @@ async def get_user_token(user_email: str = None, user_name: str = None):
             "message": f"Error: {str(e)}"
         }
 
-@App.post("/logout")
+@app.post("/logout")
 async def logout(session_token: str):
     """
     Cierra la sesión de un usuario específico.
@@ -308,7 +308,7 @@ async def logout(session_token: str):
             "message": f"Error: {str(e)}"
         }
 
-@App.post("/logoutAll")
+@app.post("/logoutAll")
 async def logout_all():
     """
     Cierra todas las sesiones activas (logout de todos los usuarios).
