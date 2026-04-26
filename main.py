@@ -100,7 +100,7 @@ async def validate_user(email: str, password: str, filename: str = "users.csv"):
                 "success": True,
                 "message": "Login exitoso",
                 "user": usuario,
-                "session_token": session_token  # Importante: devolver el token al cliente
+                "session_token": session_token
             }
         else:
             email_exists = df[df["email"] == email_clean]
@@ -126,12 +126,6 @@ async def validate_user(email: str, password: str, filename: str = "users.csv"):
 async def isLogged(session_token: str):
     """
     Verifica si un usuario está logueado mediante su token de sesión.
-    
-    Args:
-        session_token (str): Token de sesión obtenido durante el login
-    
-    Returns:
-        dict: Estado de la sesión y datos del usuario si está logueado
     """
     try:
         # Verificar si el token existe en las sesiones activas
@@ -173,3 +167,162 @@ async def isLogged(session_token: str):
             "message": f"Error del sistema: {str(e)}"
         }
 
+@App.get("/activeSessions")
+async def lookActiveSessions():
+    """
+    Muestra todos los usuarios actualmente logueados (sesiones activas).
+    
+    Returns:
+        dict: Lista de usuarios logueados con sus tokens y datos
+    """
+    try:
+        # Limpiar sesiones expiradas primero
+        expired_tokens = []
+        for token, session in active_sessions.items():
+            try:
+                expires = datetime.fromisoformat(session["expires"])
+                if datetime.now() > expires:
+                    expired_tokens.append(token)
+            except:
+                expired_tokens.append(token)
+        
+        # Eliminar sesiones expiradas
+        for token in expired_tokens:
+            del active_sessions[token]
+        
+        if not active_sessions:
+            return {
+                "success": True,
+                "message": "No hay usuarios logueados actualmente",
+                "total_active": 0,
+                "users": []
+            }
+        
+        # Construir lista de usuarios logueados
+        active_users_list = []
+        for token, session in active_sessions.items():
+            active_users_list.append({
+                "session_token": token,
+                "user_id": session["user_id"],
+                "user_name": session["user_name"],
+                "user_email": session["user_email"],
+                "login_time": session["login_time"],
+                "expires_at": session["expires"]
+            })
+        
+        return {
+            "success": True,
+            "message": f"Hay {len(active_sessions)} usuario(s) logueado(s)",
+            "total_active": len(active_sessions),
+            "users": active_users_list
+        }
+        
+    except Exception as e:
+        print(f"Error en activeSessions: {e}")
+        return {
+            "success": False,
+            "message": f"Error al obtener sesiones activas: {str(e)}"
+        }
+
+@App.get("/getUserToken")
+async def get_user_token(user_email: str = None, user_name: str = None):
+    """
+    Obtiene el token de un usuario específico por email o nombre.
+    
+    Args:
+        user_email (str, optional): Email del usuario
+        user_name (str, optional): Nombre del usuario
+    
+    Returns:
+        dict: Token del usuario si está logueado
+    """
+    try:
+        if not user_email and not user_name:
+            return {
+                "success": False,
+                "message": "Debe proporcionar user_email o user_name"
+            }
+        
+        # Buscar sesión activa
+        found_token = None
+        found_session = None
+        
+        for token, session in active_sessions.items():
+            if user_email and session["user_email"].lower() == user_email.lower():
+                found_token = token
+                found_session = session
+                break
+            elif user_name and session["user_name"].lower() == user_name.lower():
+                found_token = token
+                found_session = session
+                break
+        
+        if found_token and found_session:
+            return {
+                "success": True,
+                "message": "Token encontrado",
+                "session_token": found_token,
+                "user": {
+                    "id": found_session["user_id"],
+                    "name": found_session["user_name"],
+                    "email": found_session["user_email"]
+                },
+                "login_time": found_session["login_time"],
+                "expires_at": found_session["expires"]
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Usuario no está logueado actualmente"
+            }
+            
+    except Exception as e:
+        print(f"Error en getUserToken: {e}")
+        return {
+            "success": False,
+            "message": f"Error: {str(e)}"
+        }
+
+@App.post("/logout")
+async def logout(session_token: str):
+    """
+    Cierra la sesión de un usuario específico.
+    """
+    try:
+        if session_token in active_sessions:
+            user_name = active_sessions[session_token]["user_name"]
+            del active_sessions[session_token]
+            return {
+                "success": True,
+                "message": f"Sesión cerrada exitosamente para {user_name}"
+            }
+        else:
+            return {
+                "success": False,
+                "message": "No se encontró una sesión activa con ese token"
+            }
+    except Exception as e:
+        print(f"Error en logout: {e}")
+        return {
+            "success": False,
+            "message": f"Error: {str(e)}"
+        }
+
+@App.post("/logoutAll")
+async def logout_all():
+    """
+    Cierra todas las sesiones activas (logout de todos los usuarios).
+    """
+    try:
+        total = len(active_sessions)
+        active_sessions.clear()
+        return {
+            "success": True,
+            "message": f"Se cerraron {total} sesión(es) activa(s)"
+        }
+    except Exception as e:
+        print(f"Error en logoutAll: {e}")
+        return {
+            "success": False,
+            "message": f"Error: {str(e)}"
+        }
