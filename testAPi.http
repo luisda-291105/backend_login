@@ -1,12 +1,105 @@
-# crear un nuevo usuario
+# =============================================
+# Backend Login API - REST Client Test
+# =============================================
 
-POST http://127.0.0.1:8000/createUser?name=perez&password=123456&email=perez@g
+
+# ---------------------------------------------
+# Crear un nuevo usuario
+# ---------------------------------------------
+
+POST http://127.0.0.1:8000/createUser?name=Juan Perez&password=123456&email=juan@email.com
 
 ###
-# buscar todos los usuarios creados
+
+# ---------------------------------------------
+# Crear un segundo usuario
+# ---------------------------------------------
+
+POST http://127.0.0.1:8000/createUser?name=Maria Lopez&password=abcdef&email=maria@email.com
+
+###
+
+# ---------------------------------------------
+# Buscar todos los usuarios creados
+# ---------------------------------------------
 
 GET http://127.0.0.1:8000/userAll
 
 ###
-# validar ingreso de usuario
-GET http://127.0.0.1:8000/validateIncome
+
+# ---------------------------------------------
+# Validar ingreso de usuario (Login)
+# ⚠ Copia el session_token de la respuesta
+# ---------------------------------------------
+
+GET http://127.0.0.1:8000/validateIncome?email=juan@email.com&password=123456
+
+###
+
+# ---------------------------------------------
+# Validar ingreso usuario 2
+# ---------------------------------------------
+
+GET http://127.0.0.1:8000/validateIncome?email=maria@email.com&password=abcdef
+
+###
+
+# ---------------------------------------------
+# Verificar si un usuario está logueado
+# ⚠ Reemplaza el token con el tuyo
+# ---------------------------------------------
+
+GET http://127.0.0.1:8000/isLogged?session_token=PEGA-TU-TOKEN-AQUI
+
+###
+
+# ---------------------------------------------
+# Ver todas las sesiones activas
+# ---------------------------------------------
+
+GET http://127.0.0.1:8000/activeSessions
+
+###
+
+# ---------------------------------------------
+# Obtener token de un usuario por email
+# ---------------------------------------------
+
+GET http://127.0.0.1:8000/getUserToken?user_email=maria@email.com
+
+###
+
+# ---------------------------------------------
+# Cerrar sesión de un usuario
+# ⚠ Reemplaza el token con el tuyo
+# ---------------------------------------------
+
+POST http://127.0.0.1:8000/logout?session_token=PEGA-TU-TOKEN-AQUI
+
+###
+
+# ---------------------------------------------
+# Cerrar TODAS las sesiones activas
+# ---------------------------------------------
+
+POST http://127.0.0.1:8000/logoutAll
+
+###
+
+# =============================================
+# CASOS DE ERROR
+# =============================================
+
+# ---------------------------------------------
+# Login con contraseña incorrecta
+# ---------------------------------------------
+
+GET http://127.0.0.1:8000/validateIncome?email=juan@email.com&password=wrongpassword
+
+###
+
+# ---------------------------------------------
+# Verificar sesión con token inválido
+# ---------------------------------------------
+
+GET http://127.0.0.1:8000/isLogged?session_token=token-invalido
